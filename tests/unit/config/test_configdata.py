@@ -27,30 +27,15 @@ from qutebrowser.config import configdata, configtypes
 from qutebrowser.utils import usertypes
 
 
-# @pytest.mark.parametrize('sect', configdata.DATA.keys())
-# def test_section_desc(sect):
-#     """Make sure every section has a description."""
-#     desc = configdata.SECTION_DESC[sect]
-#     assert isinstance(desc, str)
+def test_init():
+    """Test reading the default yaml file."""
+    configdata.init()
+    assert isinstance(configdata.DATA, dict)
+    assert 'ignore-case' in configdata.DATA
 
 
-# def test_data():
-#     """Some simple sanity tests on data()."""
-#     data = configdata.data()
-#     assert 'general' in data
-#     assert 'ignore-case' in data['general']
-
-
-# def test_readonly_data():
-#     """Make sure DATA is readonly."""
-#     with pytest.raises(ValueError, match="Trying to modify a read-only "
-#                                          "config!"):
-#         configdata.DATA['general'].setv('temp', 'ignore-case', 'true', 'true')
-
-
-def test_read_yaml_valid(tmpdir):
-    filename = tmpdir / 'data.yml'
-    filename.write(textwrap.dedent("""
+def test_read_yaml_valid():
+    data = textwrap.dedent("""
         test1:
             type: Bool
             default: true
@@ -59,24 +44,28 @@ def test_read_yaml_valid(tmpdir):
         test2:
             type: String
             default: foo
+            backend: QtWebKit
             desc: Hello World 2
-    """))
-    data = configdata.read_yaml(str(filename))
+    """)
+    data = configdata._read_yaml(data)
     assert data.keys() == {'test1', 'test2'}
-    assert data['test2'].default == "foo"
     assert data['test1'].description == "Hello World"
-    # FIXME
-    # assert isinstance(data['test1'].typ, configtypes.Bool)
+    assert data['test2'].default == "foo"
+    assert data['test2'].backends == [usertypes.Backend.QtWebKit]
+    assert isinstance(data['test1'].typ, configtypes.Bool)
 
 
-def test_read_yaml_invalid_keys(tmpdir):
-    filename = tmpdir / 'data.yml'
-    filename.write(textwrap.dedent("""
+def test_read_yaml_invalid_keys():
+    """Test reading with unknown keys."""
+    data = textwrap.dedent("""
         test:
             type: Bool
-    """))
+            default: true
+            desc: Hello World
+            hello: world
+    """,)
     with pytest.raises(ValueError, match='Invalid keys'):
-        configdata.read_yaml(str(filename))
+        configdata._read_yaml(data)
 
 
 class TestParseYamlType:
@@ -109,13 +98,13 @@ class TestParseYamlType:
         data = self._yaml("""
             type:
               name: List
-              elemtype: String
+              valtype: String
         """)
         typ = configdata._parse_yaml_type('test', data)
         assert isinstance(typ, configtypes.List)
-        assert isinstance(typ.elemtype, configtypes.String)
+        assert isinstance(typ.valtype, configtypes.String)
         assert not typ.none_ok
-        assert not typ.elemtype.none_ok
+        assert not typ.valtype.none_ok
 
     def test_dict(self):
         """Test type parsing with a dict and subtypes."""

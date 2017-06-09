@@ -36,7 +36,9 @@ import collections
 import yaml
 
 from qutebrowser.config import configtypes, sections
-from qutebrowser.utils import usertypes, qtutils
+from qutebrowser.utils import usertypes, qtutils, utils
+
+DATA = None
 
 
 FIRST_COMMENT = r"""
@@ -534,7 +536,7 @@ def _raise_invalid_node(name, what, node):
         what: The name of the thing being parsed.
         node: The invalid node.
     """
-    raise ValueError("Invalid node for {} {}: {!r}".format(
+    raise ValueError("Invalid node for {} while reading {}: {!r}".format(
         name, what, node))
 
 
@@ -543,7 +545,7 @@ def _parse_yaml_type(name, node):
         # e.g:
         #  type: Bool
         # -> create the type object without any arguments
-        name = node
+        type_name = node
         kwargs = {}
     elif isinstance(node, dict):
         # e.g:
@@ -551,21 +553,32 @@ def _parse_yaml_type(name, node):
         #    name: String
         #    none_ok: true
         # -> create the type object and pass arguments
-        name = node.pop('name')
+        type_name = node.pop('name')
         kwargs = node
     else:
         _raise_invalid_node(name, 'type', node)
 
-    typ = getattr(configtypes, name)
+    try:
+        typ = getattr(configtypes, type_name)
+    except AttributeError as e:
+        raise AttributeError("Did not find type {} for {}".format(
+            type_name, name))
 
     # Parse sub-types
-    if issubclass(typ, configtypes.Dict):
-        kwargs['keytype'] = _parse_yaml_type(name, kwargs['keytype'])
-        kwargs['valtype'] = _parse_yaml_type(name, kwargs['valtype'])
-    elif issubclass(typ, configtypes.List):
-        kwargs['elemtype'] = _parse_yaml_type(name, kwargs['elemtype'])
+    try:
+        if typ is configtypes.Dict:
+            kwargs['keytype'] = _parse_yaml_type(name, kwargs['keytype'])
+            kwargs['valtype'] = _parse_yaml_type(name, kwargs['valtype'])
+        elif typ is configtypes.List:
+            kwargs['valtype'] = _parse_yaml_type(name, kwargs['valtype'])
+    except KeyError as e:
+        _raise_invalid_node(name, str(e), node)
 
-    return typ(**kwargs)
+    try:
+        return typ(**kwargs)
+    except TypeError as e:
+        raise TypeError("Error while creating {} with {}: {}".format(
+            type_name, node, e))
 
 
 def _parse_yaml_backends_dict(name, node):
@@ -625,22 +638,22 @@ def _parse_yaml_backends(name, node):
     _raise_invalid_node(name, 'backends', node)
 
 
-def read_yaml(filename):
+def _read_yaml(yaml_data):
     """Read config data from a YAML file.
 
     Args:
-        filename: The file to read.
+        yaml_data: The YAML string to parse.
 
     Return:
         A dict mapping option names to Option elements.
     """
     parsed = {}
+    data = yaml.load(yaml_data)
 
-    with open(filename, 'r', encoding='utf-8') as f:
-        data = yaml.load(f)
+    keys = {'type', 'default', 'desc', 'backend'}
 
     for name, option in data.items():
-        if option.keys() != {'type', 'default', 'desc'}:
+        if not set(option.keys()).issubset(keys):
             raise ValueError("Invalid keys {} for {}".format(
                 option.keys(), name))
 
@@ -651,3 +664,9 @@ def read_yaml(filename):
             description=option['desc'])
 
     return parsed
+
+
+def init():
+    """Initialize configdata from the YAML file."""
+    global DATA
+    DATA = _read_yaml(utils.read_file('config/configdata.yml'))
