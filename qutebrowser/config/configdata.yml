@@ -10,7 +10,7 @@ startpage:
     name: List
     elemtype: String
   default: ["https://start.duckduckgo.com"]
-  desc: The default page(s) to open at the start, separated by commas.
+  desc: The default page(s) to open at the start.
 
 yank_ignored_url_parameters:
   type:
@@ -23,7 +23,7 @@ yank_ignored_url_parameters:
     - utm_campaign
     - utm_term
     - utm_content
-  desc: The URL parameters to strip with :yank url, separated by commas.
+  desc: The URL parameters to strip with :yank url.
 
 default_open_dispatcher:
   type:
@@ -38,20 +38,14 @@ default_open_dispatcher:
     will be appended.
 
 default_page:
-  type:
-    name: FuzzyUrl
+  type: FuzzyUrl
   default: https://start.duckduckgo.com/
   desc: >-
     The page to open if :open -t/-b/-w is used without URL. Use `about:blank`
     for a blank page.
 
 auto_search:
-  type:
-    name: AutoSearch
-    valid_values:
-      - naive: "Use simple/naive check."
-      - dns: "Use DNS requests (might be slow!)."
-      - false: "Never search automatically."
+  type: AutoSearch
   default: naive
   desc: Whether to start a search when something else than a URL is entered.
 
@@ -224,7 +218,7 @@ zoom_levels:
     - 300%
     - 400%
     - 500%
-  desc: The available zoom levels
+  desc: The available zoom levels.
 
 default_zoom:
   type: Perc
@@ -316,7 +310,7 @@ statusbar_padding:
     bottom: 1
     left: 0
     right: 0
-  desc: Padding for statusbar
+  desc: Padding for the statusbar.
 
 window_title_format:
   type:
@@ -349,7 +343,7 @@ window_title_format:
 modal_js_dialog:
   type: Bool
   default: false
-  desc: Use standard JavaScript modal dialog for alert() and confirm()
+  desc: Use the standard JavaScript modal dialog for `alert()` and `confirm()`
 
 hide_wayland_decoration:
   type: Bool
@@ -463,6 +457,7 @@ custom_headers:
     name: Dict
     keytype: String
     valtype: String
+    none_ok: true
   desc: Set custom headers for qutebrowser HTTP requests.
 
 netrc_file:
@@ -651,14 +646,7 @@ background_tabs:
 
 select_on_remove:
   default: 'next'
-  type:
-    name: SelectOnRemove
-    valid_values:
-    - prev: Select the tab which came before the closed one (left in horizontal, above
-        in vertical).
-    - next: Select the tab which came after the closed one (right in horizontal, below
-        in vertical).
-    - last-used: Select the previously selected tab.
+  type: SelectOnRemove
   desc: Which tab to select when the focused tab is removed.
 
 new_tab_position:
@@ -692,12 +680,13 @@ show:
     - never: Always hide the tab bar.
     - multiple: Hide the tab bar if only one tab is open.
     - switching: Show the tab bar when switching tabs.
-  desc: When to show the tab bar
+  desc: When to show the tab bar.
 
 show_switching_delay:
   default: 800
   type: Int
-  desc: "Time to show the tab bar before hiding it when tabs->show is set to 'switching'."
+  desc: "Time to show the tab bar before hiding it when tabs->show is set to
+    'switching'."
 
 wrap:
   default: true
@@ -967,12 +956,12 @@ javascript_can_close_windows:
 
 javascript_can_access_clipboard:
   default: false
+  type: Bool
   desc: >-
     Whether JavaScript programs can read or write to the clipboard.
 
     With QtWebEngine, writing the clipboard as response to a user interaction is always
     allowed.
-  type: Bool
 
 ignore_javascript_prompt:
   default: false
@@ -1026,6 +1015,7 @@ host_block_lists:
     none_ok: true
   desc: |
     List of URLs of lists which contain hosts to block.
+
     The file can be in one of the following formats:
 
     - An `/etc/hosts`-like file
@@ -1043,8 +1033,8 @@ host_blocking_whitelist:
   - piwik.org
   type:
     name: List
-    none_ok: true
     valtype: string
+    none_ok: true
   desc: >-
     List of domains that should always be loaded, despite being ad-blocked.
 
@@ -1075,7 +1065,7 @@ mode:
   type:
     name: String
     valid_values:
-      - number: Use numeric hints. (In this mode you can also type letters form
+      - number: Use numeric hints. (In this mode you can also type letters from
           the hinted element to filter and reduce the number of elements that
           are hinted.)
       - letter: Use the chars in the hints -> chars setting.
@@ -1129,14 +1119,14 @@ auto_follow:
       - full-match: "Follow the hint when the user typed the whole hint (letter,
           word or number mode) or the element's text (only in number mode)."
       - never: "The user will always need to press Enter to follow a hint."
-  desc: Controls when a hint can be automatically followed without the user pressing
-    Enter.
+  desc: Controls when a hint can be automatically followed without the user
+    pressing Enter.
 
 auto_follow_timeout:
   default: 0
   type: Int
-  desc: A timeout (in milliseconds) to inhibit normal-mode key bindings after a successful
-    auto-follow.
+  desc: A timeout (in milliseconds) to inhibit normal-mode key bindings after a
+    successful auto-follow.
 
 next_regexes:
   default:
@@ -1181,12 +1171,28 @@ hide_unmatched_rapid_hints:
   type: Bool
   desc: Controls hiding unmatched hints in rapid mode.
 
-
 # searchengines
-# FIXME:conf
+
+searchengines:
+  default:
+    DEFAULT: https://duckduckgo.com/?q={}
+  type:
+    name: Dict
+    keytype: SearchEngineName
+    valtype: SearchEngineUrl
+  desc: FIXME
 
 # aliases
-# FIXME:conf
+
+aliases:
+  default: {}
+  type:
+    name: Dict
+    keytype:
+      name: String
+      forbidden: ' '
+    valtype: Command
+  desc: Command aliases FIXME
 
 # colors
 
@@ -1600,7 +1606,7 @@ fonts.tabbar:
   desc: Font used in the tab bar.
 
 fonts.statusbar:
-  default: monospace
+  default: 8pt monospace
   type: Font
   desc: Font used in the statusbar.
 
@@ -1675,6 +1681,8 @@ fonts.web_size_minimum:
   desc: The hard minimum font size.
 
 fonts.web_size_minimum_logical:
+  # This is 0 as default on QtWebKit, and 6 on QtWebEngine - so let's
+  # just go for 6 here.
   default: 6
   type:
     name: Int
