@@ -78,7 +78,7 @@ editor.command:
 editor.encoding:
   type: Encoding
   default: utf-8
-  desc: Encoding to use for the editor.
+  desc7 : Encoding to use for the editor.
 
 content.private_browsing:
   type: Bool
