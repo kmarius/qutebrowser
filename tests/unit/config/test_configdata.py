@@ -31,7 +31,7 @@ def test_init():
     """Test reading the default yaml file."""
     configdata.init()
     assert isinstance(configdata.DATA, dict)
-    assert 'ignore-case' in configdata.DATA
+    assert 'ignore_case' in configdata.DATA
 
 
 def test_read_yaml_valid():
@@ -123,6 +123,37 @@ class TestParseYamlType:
         assert not typ.none_ok
         assert typ.valtype.minval == 10
 
+    def test_invalid_node(self):
+        """Test type parsing with invalid node type."""
+        data = self._yaml("type: 42")
+        with pytest.raises(ValueError, match="Invalid node for test while "
+                                             "reading type: 42"):
+            configdata._parse_yaml_type('test', data)
+
+    def test_unknown_type(self):
+        """Test type parsing with type which doesn't exist."""
+        data = self._yaml("type: Foobar")
+        with pytest.raises(AttributeError,
+                           match="Did not find type Foobar for test"):
+            configdata._parse_yaml_type('test', data)
+
+    def test_unknown_dict(self):
+        """Test type parsing with a dict without keytype."""
+        data = self._yaml("type: Dict")
+        with pytest.raises(ValueError, match="Invalid node for test while "
+                                             "reading 'keytype': 'Dict'"):
+            configdata._parse_yaml_type('test', data)
+
+    def test_unknown_args(self):
+        """Test type parsing with unknown type arguments."""
+        data = self._yaml("""
+            type:
+              name: Int
+              answer: 42
+        """)
+        with pytest.raises(TypeError, match="Error while creating Int"):
+            configdata._parse_yaml_type('test', data)
+
 
 class TestParseYamlBackend:
 
@@ -159,3 +190,24 @@ class TestParseYamlBackend:
                             lambda v: has_new_version)
         backends = configdata._parse_yaml_backends('test', data)
         assert backends == expected
+
+    @pytest.mark.parametrize('yaml_data', [
+        # Wrong type
+        "backend: 42",
+        # Unknown key
+        """
+        backend:
+          QtWebKit: true
+          QtWebEngine: true
+          foo: bar
+        """,
+        # Missing key
+        """
+        backend:
+          QtWebKit: true
+        """,
+    ])
+    def test_invalid_backend(self, yaml_data):
+        with pytest.raises(ValueError, match="Invalid node for test while "
+                                             "reading backends:"):
+            configdata._parse_yaml_backends('test', self._yaml(yaml_data))
