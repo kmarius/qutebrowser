@@ -34,38 +34,40 @@ def test_init():
     assert 'ignore_case' in configdata.DATA
 
 
-def test_read_yaml_valid():
-    data = textwrap.dedent("""
-        test1:
-            type: Bool
-            default: true
-            desc: Hello World
-
-        test2:
-            type: String
-            default: foo
-            backend: QtWebKit
-            desc: Hello World 2
-    """)
-    data = configdata._read_yaml(data)
-    assert data.keys() == {'test1', 'test2'}
-    assert data['test1'].description == "Hello World"
-    assert data['test2'].default == "foo"
-    assert data['test2'].backends == [usertypes.Backend.QtWebKit]
-    assert isinstance(data['test1'].typ, configtypes.Bool)
+class TestReadYaml:
 
 
-def test_read_yaml_invalid_keys():
-    """Test reading with unknown keys."""
-    data = textwrap.dedent("""
-        test:
-            type: Bool
-            default: true
-            desc: Hello World
-            hello: world
-    """,)
-    with pytest.raises(ValueError, match='Invalid keys'):
-        configdata._read_yaml(data)
+    def test_valid(self):
+        data = textwrap.dedent("""
+            test1:
+                type: Bool
+                default: true
+                desc: Hello World
+
+            test2:
+                type: String
+                default: foo
+                backend: QtWebKit
+                desc: Hello World 2
+        """)
+        data = configdata._read_yaml(data)
+        assert data.keys() == {'test1', 'test2'}
+        assert data['test1'].description == "Hello World"
+        assert data['test2'].default == "foo"
+        assert data['test2'].backends == [usertypes.Backend.QtWebKit]
+        assert isinstance(data['test1'].typ, configtypes.Bool)
+
+    def test_invalid_keys(self):
+        """Test reading with unknown keys."""
+        data = textwrap.dedent("""
+            test:
+                type: Bool
+                default: true
+                desc: Hello World
+                hello: world
+        """,)
+        with pytest.raises(ValueError, match='Invalid keys'):
+            configdata._read_yaml(data)
 
 
 class TestParseYamlType:
