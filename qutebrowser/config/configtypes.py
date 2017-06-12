@@ -146,29 +146,19 @@ class BaseType:
             else:
                 raise configexc.ValidationError(value, "may not be empty!")
 
-        if any(ord(c) < 32 or ord(c) == 0x7f for c in value):
-            raise configexc.ValidationError(value, "may not contain "
-                                            "unprintable chars!")
+        if isinstance(value, str):
+            if any(ord(c) < 32 or ord(c) == 0x7f for c in value):
+                raise configexc.ValidationError(value, "may not contain "
+                                                "unprintable chars!")
 
-    def transform(self, value):
-        """Transform the setting value.
+    def _py_typecheck(self, value, expected):
+        """Check the Python type of a value."""
+        if not isinstance(value, expected):
+            raise configexc.ValidationError(
+                value, "expected a value of type {} but got {}".format(
+                    expected, type(value)))
 
-        This method can assume the value is indeed a valid value.
-
-        The default implementation returns the original value.
-
-        Args:
-            value: The original string value.
-
-        Return:
-            The transformed value.
-        """
-        if not value:
-            return None
-        else:
-            return value
-
-    def validate(self, value):
+    def _validate_valid_values(self, value):
         """Validate value against possible values.
 
         The default implementation checks the value against self.valid_values
@@ -177,7 +167,7 @@ class BaseType:
         Args:
             value: The value to validate.
         """
-        self._basic_validation(value)
+        # FIXME:conf still needed?
         if not value:
             return
         if self.valid_values is not None:
@@ -188,6 +178,45 @@ class BaseType:
         else:
             raise NotImplementedError("{} does not implement validate.".format(
                 self.__class__.__name__))
+
+    def from_str(self, value):
+        """Get the setting value from a string.
+
+        Args:
+            value: The original string value.
+
+        Return:
+            The transformed value.
+        """
+        raise NotImplementedError
+
+    def from_py(self, value):
+        """Get the setting value from a Python value.
+
+        Args:
+            value: The value we got from Python/YAML.
+
+        Return:
+            The transformed value.
+
+        Raise:
+            configexc.ValidationError if the value was invalid.
+        """
+        raise NotImplementedError
+
+    def to_str(self, value):
+        """Get a string from the setting value.
+
+        The resulting string should be parseable again by from_str.
+        """
+        raise NotImplementedError
+
+    # def to_py(self, value):
+    #     """Get a Python/YAML value from the setting value.
+
+    #     The resulting value should be parseable again by from_py.
+    #     """
+    #     raise NotImplementedError
 
     def complete(self):
         """Return a list of possible values for completion.
@@ -223,18 +252,27 @@ class MappingType(BaseType):
 
     MAPPING = {}
 
-    def __init__(self, none_ok=False,
-                 valid_values=None):
+    def __init__(self, none_ok=False, valid_values=None):
         super().__init__(none_ok)
         self.valid_values = valid_values
 
-    def validate(self, value):
-        super().validate(value.lower())
-
-    def transform(self, value):
+    def from_py(self, value):
+        self._basic_validation(value)
         if not value:
             return None
+        self._py_typecheck(value, str)
+        self._validate_valid_values(value.lower())
         return self.MAPPING[value.lower()]
+
+    def from_str(self, value):
+        self._basic_validation(value)
+        if not value:
+            return None
+        self._validate_valid_values(value.lower())
+
+    def to_str(self, value):
+        reverse_mapping = {v: k for k, v in self.MAPPING.items()}
+        return reverse_mapping[value]
 
 
 class String(BaseType):
