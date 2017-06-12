@@ -82,7 +82,7 @@ class Saveable:
             force: Force saving, no matter what.
         """
         if (self._config_opt is not None and
-                (not config.get(*self._config_opt)) and
+                (not config.get(self._config_opt)) and
                 (not explicit) and (not force)):
             if not silent:
                 log.save.debug("Not saving {name} because autosaving has been "
@@ -130,7 +130,7 @@ class SaveManager(QObject):
     @config.change_filter('general', 'auto-save-interval')
     def set_autosave_interval(self):
         """Set the auto-save interval."""
-        interval = config.get('general', 'auto-save-interval')
+        interval = config.val.auto_save_interval
         if interval == 0:
             self._save_timer.stop()
         else:
