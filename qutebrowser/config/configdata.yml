@@ -45,7 +45,12 @@ default_page:
     for a blank page.
 
 auto_search:
-  type: AutoSearch
+  type:
+    name: String
+    valid_values:
+      - naive: Use simple/naive check.
+      - dns: Use DNS requests (might be slow!).
+      - never: Never search automatically.
   default: naive
   desc: Whether to start a search when something else than a URL is entered.
 
