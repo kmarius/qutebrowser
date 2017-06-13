@@ -876,7 +876,8 @@ class Dict(BaseType):
         self.fixed_keys = fixed_keys
 
     def _validate_keys(self, value):
-        if self.fixed_keys is not None and value.keys() != self.fixed_keys:
+        if (self.fixed_keys is not None and
+                value.keys() != set(self.fixed_keys)):
             raise configexc.ValidationError(
                 value, "Expected keys {}".format(self.fixed_keys))
 
