@@ -427,7 +427,7 @@ class TabbedBrowser(tabwidget.TabWidget):
         if url is not None:
             tab.openurl(url)
         if background is None:
-            background = config.val.tabs.background_tabs
+            background = config.val.tabs.background
         if background:
             self.tab_index_changed.emit(self.currentIndex(), self.count())
         else:
@@ -502,7 +502,7 @@ class TabbedBrowser(tabwidget.TabWidget):
         else:
             self.setTabIcon(idx, QIcon())
             if (config.val.tabs.tabs_are_windows and
-                    config.val.tabs.show_favicons):
+                    config.val.tabs.favicons.show):
                 self.window().setWindowIcon(self.default_window_icon)
         if idx == self.currentIndex():
             self.update_window_title()
@@ -566,7 +566,7 @@ class TabbedBrowser(tabwidget.TabWidget):
             tab: The WebView where the title was changed.
             icon: The new icon
         """
-        if not config.val.tabs.show_favicons:
+        if not config.val.tabs.favicons.show:
             return
         try:
             idx = self._tab_index(tab)
