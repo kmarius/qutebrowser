@@ -134,11 +134,14 @@ class BaseType:
         """Get the type's valid values for documentation."""
         return self.valid_values
 
-    def _basic_validation(self, value):
+    def _basic_validation(self, value, pytype=None):
         """Do some basic validation for the value (empty, non-printable chars).
+
+        Also does a Python typecheck on the value (if coming from YAML/Python).
 
         Arguments:
             value: The value to check.
+            pytype: If given, a Python type to check the value against.
         """
         if not value:
             if self.none_ok:
@@ -151,12 +154,10 @@ class BaseType:
                 raise configexc.ValidationError(value, "may not contain "
                                                 "unprintable chars!")
 
-    def _py_typecheck(self, value, expected):
-        """Check the Python type of a value."""
-        if not isinstance(value, expected):
+        if pytype is not None and not isinstance(value, pytype):
             raise configexc.ValidationError(
                 value, "expected a value of type {} but got {}".format(
-                    expected, type(value)))
+                    pytype, type(value)))
 
     def _validate_valid_values(self, value):
         """Validate value against possible values.
@@ -257,21 +258,18 @@ class MappingType(BaseType):
         self.valid_values = valid_values
 
     def from_py(self, value):
-        self._basic_validation(value)
+        self._basic_validation(value, pytype=str)
         if not value:
             return None
-        self._py_typecheck(value, str)
         self._validate_valid_values(value.lower())
         return self.MAPPING[value.lower()]
 
     def from_str(self, value):
-        self._basic_validation(value)
-        if not value:
-            return None
-        self._validate_valid_values(value.lower())
+        return self.from_py(value)
 
     def to_str(self, value):
         reverse_mapping = {v: k for k, v in self.MAPPING.items()}
+        assert len(self.MAPPING) == len(reverse_mapping)
         return reverse_mapping[value]
 
 
@@ -303,16 +301,11 @@ class String(BaseType):
         self.forbidden = forbidden
         self._completions = completions
 
-    def validate(self, value):
-        self._basic_validation(value)
+    def from_py(self, value):
+        self._basic_validation(value, pytype=str)
         if not value:
-            return
-
-        if self.valid_values is not None:
-            if value not in self.valid_values:
-                raise configexc.ValidationError(
-                    value,
-                    "valid values: {}".format(', '.join(self.valid_values)))
+            return None
+        self._validate_valid_values(value)
 
         if self.forbidden is not None and any(c in value
                                               for c in self.forbidden):
@@ -325,6 +318,11 @@ class String(BaseType):
             raise configexc.ValidationError(value, "must be at most {} chars "
                                             "long!".format(self.maxlen))
 
+        return value
+
+    def from_str(self, value):
+        return self.from_py(value)
+
     def complete(self):
         if self._completions is not None:
             return self._completions
@@ -336,15 +334,17 @@ class UniqueCharString(String):
 
     """A string which may not contain duplicate chars."""
 
-    def validate(self, value):
-        super().validate(value)
+    def from_py(self, value):
+        value = super().from_py(value)
         if not value:
-            return
+            return None
 
         # Check for duplicate values
         if len(set(value)) != len(value):
             raise configexc.ValidationError(
                 value, "String contains duplicate values!")
+
+        return value
 
 
 class List(BaseType):
@@ -367,23 +367,23 @@ class List(BaseType):
     def get_valid_values(self):
         return self.valtype.get_valid_values()
 
-    def transform(self, value):
+    def from_str(self, value):
+        try:
+            json_val = json.loads(value)
+        except ValueError as e:
+            raise configexc.ValidationError(value, str(e))
+        return self.from_py(json_val)
+
+    def from_py(self, value):
+        self._basic_validation(value, pytype=list)
         if not value:
             return None
-        else:
-            return [self.valtype.transform(v.strip())
-                    for v in value.split(',')]
 
-    def validate(self, value):
-        self._basic_validation(value)
-        if not value:
-            return
-        vals = value.split(',')
-        if self.length is not None and len(vals) != self.length:
+        if self.length is not None and len(value) != self.length:
             raise configexc.ValidationError(value, "Exactly {} values need to "
                                             "be set!".format(self.length))
-        for val in vals:
-            self.valtype.validate(val.strip())
+
+        return [self.valtype.from_py(v) for v in value]
 
 
 class FlagList(List):
@@ -402,19 +402,13 @@ class FlagList(List):
         super().__init__(BaseType(), none_ok)
         self.valtype.valid_values = valid_values
 
-    def validate(self, value):
-        if self.valtype.valid_values is not None:
-            super().validate(value)
-        else:
-            self._basic_validation(value)
-        if not value:
-            return
-        vals = super().transform(value)
-
+    def from_py(self, value):
+        vals = super().from_py(value)
         # Check for duplicate values
         if len(set(vals)) != len(vals):
             raise configexc.ValidationError(
                 value, "List contains duplicate values!")
+        return vals
 
     def complete(self):
         valid_values = self.valtype.valid_values
@@ -445,17 +439,18 @@ class Bool(BaseType):
         super().__init__(none_ok)
         self.valid_values = ValidValues('true', 'false')
 
-    def transform(self, value):
-        if not value:
-            return None
-        else:
-            return BOOLEAN_STATES[value.lower()]
+    def from_py(self, value):
+        self._basic_validation(value, pytype=bool)
+        return value
 
-    def validate(self, value):
+    def from_str(self, value):
         self._basic_validation(value)
         if not value:
-            return
-        elif value.lower() not in BOOLEAN_STATES:
+            return None
+
+        try:
+            return BOOLEAN_STATES[value.lower()]
+        except KeyError:
             raise configexc.ValidationError(value, "must be a boolean!")
 
 
@@ -467,17 +462,15 @@ class BoolAsk(Bool):
         super().__init__(none_ok)
         self.valid_values = ValidValues('true', 'false', 'ask')
 
-    def transform(self, value):
-        if value.lower() == 'ask':
+    def from_py(self, value):
+        # basic validation unneeded if it's == 'ask' and done by Bool if we call
+        # super().from_py
+        if isinstance(value, str) and value.lower() == 'ask':
             return 'ask'
-        else:
-            return super().transform(value)
+        return super().from_py(value)
 
-    def validate(self, value):
-        if value.lower() == 'ask':
-            return
-        else:
-            super().validate(value)
+    def from_str(self, value):
+        return self.from_py(value)
 
 
 class Int(BaseType):
@@ -508,26 +501,24 @@ class Int(BaseType):
                 assert isinstance(value, int), value
             return value
 
-    def transform(self, value):
-        if not value:
-            return None
-        else:
-            return int(value)
-
-    def validate(self, value):
-        self._basic_validation(value)
-        if not value:
-            return
+    def from_str(self, value):
         try:
             intval = int(value)
         except ValueError:
             raise configexc.ValidationError(value, "must be an integer!")
-        if self.minval is not None and intval < self.minval:
+        return self.from_py(intval)
+
+    def from_py(self, value):
+        self._basic_validation(value, pytype=int)
+        if not value:
+            return value
+        if self.minval is not None and value < self.minval:
             raise configexc.ValidationError(value, "must be {} or "
                                             "bigger!".format(self.minval))
-        if self.maxval is not None and intval > self.maxval:
+        if self.maxval is not None and value > self.maxval:
             raise configexc.ValidationError(value, "must be {} or "
                                             "smaller!".format(self.maxval))
+        return value
 
 
 class Float(BaseType):
@@ -539,34 +530,46 @@ class Float(BaseType):
         maxval: Maximum value (inclusive).
     """
 
+    # FIXME:conf inherit Int/Float
+
     def __init__(self, minval=None, maxval=None, none_ok=False):
         super().__init__(none_ok)
-        if maxval is not None and minval is not None and maxval < minval:
-            raise ValueError("minval ({}) needs to be <= maxval ({})!".format(
-                minval, maxval))
-        self.minval = minval
-        self.maxval = maxval
+        self.minval = self._parse_limit(minval)
+        self.maxval = self._parse_limit(maxval)
+        if self.maxval is not None and self.minval is not None:
+            if self.maxval < self.minval:
+                raise ValueError("minval ({}) needs to be <= maxval ({})!"
+                                 .format(self.minval, self.maxval))
 
-    def transform(self, value):
-        if not value:
-            return None
+    def _parse_limit(self, value):
+        if value == 'maxint':
+            return qtutils.MAXVALS['int']
+        elif value == 'maxint64':
+            return qtutils.MAXVALS['int64']
         else:
-            return float(value)
+            if value is not None:
+                assert isinstance(value, int), value
+            return value
 
-    def validate(self, value):
-        self._basic_validation(value)
-        if not value:
-            return
+    def from_str(self, value):
         try:
-            floatval = float(value)
+            intval = int(value)
         except ValueError:
-            raise configexc.ValidationError(value, "must be a float!")
-        if self.minval is not None and floatval < self.minval:
+            raise configexc.ValidationError(value, "must be an integer!")
+        return self.from_py(intval)
+
+    def from_py(self, value):
+        self._basic_validation(value, pytype=int)
+        if not value:
+            return value
+        if self.minval is not None and value < self.minval:
             raise configexc.ValidationError(value, "must be {} or "
                                             "bigger!".format(self.minval))
-        if self.maxval is not None and floatval > self.maxval:
+        if self.maxval is not None and value > self.maxval:
             raise configexc.ValidationError(value, "must be {} or "
                                             "smaller!".format(self.maxval))
+        return value
+
 
 
 class Perc(BaseType):
