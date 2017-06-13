@@ -93,7 +93,7 @@ def _generate_stylesheet():
         QWidget#StatusBar,
         QWidget#StatusBar QLabel,
         QWidget#StatusBar QLineEdit {
-            font: {{ conf.fonts.statusbar.normal }};
+            font: {{ conf.fonts.statusbar }};
             background-color: {{ conf.colors.statusbar.normal.bg }};
             color: {{ conf.colors.statusbar.normal.fg }};
         }
