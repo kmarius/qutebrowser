@@ -878,10 +878,10 @@ tabs.padding:
 
 tabs.indicator_padding:
   default:
-    - top: 2
-    - bottom: 2
-    - left: 0
-    - right: 4
+    top: 2
+    bottom: 2
+    left: 0
+    right: 4
   type: Padding
   desc: Padding for indicators
 
