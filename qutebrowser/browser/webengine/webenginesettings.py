@@ -299,7 +299,7 @@ MAPPINGS = {
     'fonts.web.size.default':
         Setter(QWebEngineSettings.setFontSize,
                args=[QWebEngineSettings.DefaultFontSize]),
-    'fonts.web.size.default.fixed':
+    'fonts.web.size.default_fixed':
         Setter(QWebEngineSettings.setFontSize,
                args=[QWebEngineSettings.DefaultFixedFontSize]),
 
@@ -308,7 +308,7 @@ MAPPINGS = {
 }
 
 try:
-    MAPPINGS['content.print-element-backgrounds'] = Attribute(
+    MAPPINGS['content.print_element_backgrounds'] = Attribute(
         QWebEngineSettings.PrintElementBackgrounds)
 except AttributeError:
     # Added in Qt 5.8
