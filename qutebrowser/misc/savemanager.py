@@ -38,9 +38,8 @@ class Saveable:
         _dirty: Whether the saveable was changed since the last save.
         _save_handler: The function to call to save this Saveable.
         _save_on_exit: Whether to always save this saveable on exit.
-        _config_opt: A (section, option) tuple of a config option which decides
-                     whether to auto-save or not. None if no such option
-                     exists.
+        _config_opt: A config option which decides whether to auto-save or not.
+                     None if no such option exists.
         _filename: The filename of the underlying file.
     """
 
@@ -145,8 +144,7 @@ class SaveManager(QObject):
             name: The name to use.
             save: The function to call to save this saveable.
             changed: The signal emitted when this saveable changed.
-            config_opt: A (section, option) tuple deciding whether to auto-save
-                        or not.
+            config_opt: An option deciding whether to auto-save or not.
             filename: The filename of the underlying file, so we can force
                       saving if it doesn't exist.
             dirty: Whether the saveable is already dirty.
