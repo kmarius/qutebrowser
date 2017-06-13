@@ -380,12 +380,19 @@ class FlagList(List):
         super().__init__(BaseType(), none_ok)
         self.valtype.valid_values = valid_values
 
+    def _check_duplicates(self, values):
+        if len(set(values)) != len(values):
+            raise configexc.ValidationError(
+                values, "List contains duplicate values!")
+
+    def from_str(self, value):
+        vals = super().from_str(value)
+        self._check_duplicates(vals)
+        return vals
+
     def from_py(self, value):
         vals = super().from_py(value)
-        # Check for duplicate values
-        if len(set(vals)) != len(vals):
-            raise configexc.ValidationError(
-                value, "List contains duplicate values!")
+        self._check_duplicates(vals)
         return vals
 
     def complete(self):
@@ -1204,30 +1211,27 @@ class Url(BaseType):
 
     """A URL."""
 
-    def transform(self, value):
+    def from_py(self, value):
+        self._basic_validation(value, pytype=str)
         if not value:
             return None
-        else:
-            return QUrl.fromUserInput(value)
 
-    def validate(self, value):
-        self._basic_validation(value)
-        if not value:
-            return
-        val = self.transform(value)
-        if not val.isValid():
+        qurl = QUrl.fromUserInput(value)
+        if not qurl.isValid():
             raise configexc.ValidationError(value, "invalid URL - "
-                                            "{}".format(val.errorString()))
+                                            "{}".format(qurl.errorString()))
+        return qurl
 
 
 class SessionName(BaseType):
 
     """The name of a session."""
 
-    def validate(self, value):
-        self._basic_validation(value)
+    def from_py(self, value):
+        self._basic_validation(value, pytype=str)
         if value.startswith('_'):
             raise configexc.ValidationError(value, "may not start with '_'!")
+        return value
 
 
 class SelectOnRemove(MappingType):
@@ -1269,20 +1273,30 @@ class ConfirmQuit(FlagList):
              "downloads are running"),
             ('never', "Never show a confirmation."))
 
-    def validate(self, value):
-        super().validate(value)
-        if not value:
-            return
-        values = [x for x in self.transform(value) if x]
-
+    def _check_values(self, values):
+        """Check whether the values can be combined in the way they are."""
         # Never can't be set with other options
         if 'never' in values and len(values) > 1:
             raise configexc.ValidationError(
-                value, "List cannot contain never!")
+                values, "List cannot contain never!")
         # Always can't be set with other options
         elif 'always' in values and len(values) > 1:
             raise configexc.ValidationError(
-                value, "List cannot contain always!")
+                values, "List cannot contain always!")
+
+    def from_py(self, value):
+        values = super().from_py(value)
+        if not values:
+            return None
+        self._check_values(values)
+        return values
+
+    def from_str(self, value):
+        values = super().from_str(value)
+        if not values:
+            return None
+        self._check_values(values)
+        return values
 
 
 class NewTabPosition(BaseType):
