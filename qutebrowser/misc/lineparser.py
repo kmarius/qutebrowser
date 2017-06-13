@@ -272,7 +272,7 @@ class LimitLineParser(LineParser):
         Args:
             configdir: Directory to read the config from, or None.
             fname: Filename of the config file.
-            limit: Config tuple (section, option) which contains a limit.
+            limit: Config option which contains a limit.
             binary: Whether to open the file in binary mode.
         """
         super().__init__(configdir, fname, binary=binary, parent=parent)
