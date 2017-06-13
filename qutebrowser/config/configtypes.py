@@ -1312,34 +1312,6 @@ class NewTabPosition(BaseType):
             ('last', "At the end."))
 
 
-class IgnoreCase(Bool):
-
-    """Whether to ignore case when searching."""
-
-    def __init__(self, none_ok=False):
-        super().__init__(none_ok)
-        self.valid_values = ValidValues(
-            ('true', "Search case-insensitively"),
-            ('false', "Search case-sensitively"),
-            ('smart', "Search case-sensitively if there "
-             "are capital chars"))
-
-    def transform(self, value):
-        if value.lower() == 'smart':
-            return 'smart'
-        else:
-            return super().transform(value)
-
-    def validate(self, value):
-        self._basic_validation(value)
-        if not value:
-            return
-        if value.lower() == 'smart':
-            return
-        else:
-            super().validate(value)
-
-
 class UserAgent(BaseType):
 
     """The user agent to use."""
