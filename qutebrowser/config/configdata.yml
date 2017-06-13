@@ -869,10 +869,10 @@ tabs.mousewheel_switching:
 
 tabs.padding:
   default:
-    - top: 0
-    - bottom: 0
-    - left: 5
-    - right: 5
+    top: 0
+    bottom: 0
+    left: 5
+    right: 5
   type: Padding
   desc: Padding for tabs
 
