@@ -1181,12 +1181,12 @@ class TextAlignment(MappingType):
             valid_values=ValidValues('left', 'right', 'center'))
 
 
-class VerticalPosition(BaseType):
+class VerticalPosition(String):
 
     """The position of the download bar."""
 
     def __init__(self, none_ok=False):
-        super().__init__(none_ok)
+        super().__init__(none_ok=none_ok)
         self.valid_values = ValidValues('top', 'bottom')
 
 
