@@ -186,12 +186,12 @@ class BaseType:
         """
         raise NotImplementedError
 
-    def to_str(self, value):
-        """Get a string from the setting value.
+    # def to_str(self, value):
+    #     """Get a string from the setting value.
 
-        The resulting string should be parseable again by from_str.
-        """
-        raise NotImplementedError
+    #     The resulting string should be parseable again by from_str.
+    #     """
+    #     raise NotImplementedError
 
     # def to_py(self, value):
     #     """Get a Python/YAML value from the setting value.
@@ -245,10 +245,10 @@ class MappingType(BaseType):
         self._validate_valid_values(value.lower())
         return self.MAPPING[value.lower()]
 
-    def to_str(self, value):
-        reverse_mapping = {v: k for k, v in self.MAPPING.items()}
-        assert len(self.MAPPING) == len(reverse_mapping)
-        return reverse_mapping[value]
+    # def to_str(self, value):
+    #     reverse_mapping = {v: k for k, v in self.MAPPING.items()}
+    #     assert len(self.MAPPING) == len(reverse_mapping)
+    #     return reverse_mapping[value]
 
 
 class String(BaseType):
@@ -1046,6 +1046,9 @@ class ShellCommand(BaseType):
         self.placeholder = placeholder
 
     def from_str(self, value):
+        self._basic_validation(value, pytype=str)
+        if not value:
+            return None
         try:
             return self.from_py(shlex.split(value))
         except ValueError as e:
