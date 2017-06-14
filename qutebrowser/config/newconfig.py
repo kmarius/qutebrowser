@@ -129,7 +129,7 @@ class NewConfigManager(QObject):
             value = self._values[option]
         except KeyError:
             raise configexc.NoOptionError(option)
-        return value.typ.from_py(val.default)
+        return value.typ.from_py(value.default)
 
 
 class ConfigContainer:
