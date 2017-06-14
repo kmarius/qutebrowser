@@ -1526,7 +1526,7 @@ colors.downloads.start.bg:
   desc: Color gradient start for download backgrounds.
 
 colors.downloads.stop.fg:
-  default: '#0000aa'
+  default: white
   type: QtColor
   desc: Color gradient end for download text.
 
