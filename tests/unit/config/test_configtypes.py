@@ -179,23 +179,16 @@ class TestValidValues:
 class TestBaseType:
 
     @pytest.fixture
-    def basetype(self):
-        return configtypes.BaseType()
+    def klass(self):
+        return configtypes.BaseType
 
-    @pytest.mark.parametrize('val, expected', [
-        ('foobar', 'foobar'),
-        ('', None),
-    ])
-    def test_from_py(self, basetype, val, expected):
-        """Test transform with a value."""
-        assert basetype.from_py(val) == expected
-
-    def test_validate_valid_values_nop(self, basetype):
+    def test_validate_valid_values_nop(self, klass):
         """Test validate without valid_values set."""
-        basetype._validate_valid_values("foo")
+        klass()._validate_valid_values("foo")
 
-    def test_validate_valid_values(self, basetype):
+    def test_validate_valid_values(self, klass):
         """Test validate with valid_values set."""
+        basetype = klass()
         basetype.valid_values = configtypes.ValidValues('foo', 'bar')
         basetype._validate_valid_values('bar')
         with pytest.raises(configexc.ValidationError):
@@ -203,28 +196,29 @@ class TestBaseType:
 
     @pytest.mark.parametrize('val', [None, '', 'foobar', 'snowman: ☃',
                                      'foo bar'])
-    def test_basic_validation_valid(self, basetype, val):
+    def test_basic_validation_valid(self, klass, val):
         """Test _basic_validation with valid values."""
+        basetype = klass()
         basetype.none_ok = True
         basetype._basic_validation(val)
 
     @pytest.mark.parametrize('val', [None, '', '\x00'])
-    def test_basic_validation_invalid(self, basetype, val):
+    def test_basic_validation_invalid(self, klass, val):
         """Test _basic_validation with invalid values."""
         with pytest.raises(configexc.ValidationError):
-            basetype._basic_validation(val)
+            klass()._basic_validation(val)
 
-    def test_basic_validation_pytype_valid(self, basetype):
-        basetype._basic_validation([], pytype=list)
+    def test_basic_validation_pytype_valid(self, klass):
+        klass()._basic_validation([], pytype=list)
 
-    def test_basic_validation_pytype_invalid(self, basetype):
+    def test_basic_validation_pytype_invalid(self, klass):
         with pytest.raises(configexc.ValidationError,
                            match='expected a value of type str but got list'):
-            basetype._basic_validation([], pytype=str)
+            klass()._basic_validation([], pytype=str)
 
-    def test_complete_none(self, basetype):
+    def test_complete_none(self, klass):
         """Test complete with valid_values not set."""
-        assert basetype.complete() is None
+        assert klass().complete() is None
 
     @pytest.mark.parametrize('valid_values, completions', [
         # Without description
@@ -237,15 +231,17 @@ class TestBaseType:
         ([('foo', "foo desc"), 'bar'],
             [('foo', "foo desc"), ('bar', "")]),
     ])
-    def test_complete_without_desc(self, basetype, valid_values, completions):
+    def test_complete_without_desc(self, klass, valid_values, completions):
         """Test complete with valid_values set without description."""
+        basetype = klass()
         basetype.valid_values = configtypes.ValidValues(*valid_values)
         assert basetype.complete() == completions
 
-    def test_get_name(self, basetype):
-        assert basetype.get_name() == 'BaseType'
+    def test_get_name(self, klass):
+        assert klass().get_name() == 'BaseType'
 
-    def test_get_valid_values(self, basetype):
+    def test_get_valid_values(self, klass):
+        basetype = klass()
         basetype.valid_values = configtypes.ValidValues('foo')
         assert basetype.get_valid_values() is basetype.valid_values
 
@@ -280,9 +276,9 @@ class TestMappingType:
 
     @pytest.mark.parametrize('val, expected', list(TESTS.items()))
     def test_from_py(self, klass, val, expected):
-        assert klass().from_py(val) == expected
+        assert klass(none_ok=True).from_py(val) == expected
 
-    @pytest.mark.parametrize('val', [None, '', 'one!', 'blah'])
+    @pytest.mark.parametrize('val', [None, 'one!', 'blah'])
     def test_from_py_invalid(self, klass, val):
         with pytest.raises(configexc.ValidationError):
             klass().from_py(val)
@@ -653,7 +649,7 @@ class TestInt:
     ])
     def test_from_str_invalid(self, klass, kwargs, val):
         with pytest.raises(configexc.ValidationError):
-            klass(**kwargs).from_py(val)
+            klass(**kwargs).from_str(val)
 
     @pytest.mark.parametrize('kwargs, val', [
         ({}, 1337),
@@ -770,8 +766,6 @@ class TestPerc:
 
 class TestPercOrInt:
 
-    """Test PercOrInt."""
-
     @pytest.fixture
     def klass(self):
         return configtypes.PercOrInt
@@ -835,8 +829,6 @@ class TestPercOrInt:
 
 
 class TestCommand:
-
-    """Test Command."""
 
     @pytest.fixture(autouse=True)
     def patch(self, monkeypatch, stubs):
@@ -1108,8 +1100,6 @@ class TestFontFamily:
 
 class TestRegex:
 
-    """Test Regex."""
-
     @pytest.fixture
     def klass(self):
         return configtypes.Regex
@@ -1156,11 +1146,12 @@ class TestRegex:
 
         The warning should be passed.
         """
+        regex = klass()
         m = mocker.patch('qutebrowser.config.configtypes.re')
         m.compile.side_effect = lambda *args: warnings.warn(warning)
         m.error = re.error
         with pytest.raises(type(warning)):
-            klass().from_py('foo')
+            regex.from_py('foo')
 
     def test_bad_pattern_warning(self, mocker, klass):
         """Test a simulated bad pattern warning.
@@ -1418,7 +1409,7 @@ class TestShellCommand:
     ])
     def test_from_str_invalid(self, klass, kwargs, val):
         with pytest.raises(configexc.ValidationError):
-            klass(**kwargs).from_py(val)
+            klass(**kwargs).from_str(val)
 
 
 class TestProxy:
@@ -1532,6 +1523,14 @@ class TestPadding:
     def test_from_py_valid(self, klass, val, expected):
         assert klass(none_ok=True).from_py(val) == expected
 
+    @pytest.mark.parametrize('val, expected', [
+        ('', None),
+        ('{"top": 1, "bottom": 2, "left": 3, "right": 4}',
+            configtypes.PaddingValues(1, 2, 3, 4)),
+    ])
+    def test_from_str_valid(self, klass, val, expected):
+        assert klass(none_ok=True).from_str(val) == expected
+
     @pytest.mark.parametrize('val', [
         None,
         {'top': 1, 'bottom': 2, 'left': 3, 'right': 4, 'foo': 5},
@@ -1614,7 +1613,9 @@ class TestConfirmQuit:
 
     @pytest.mark.parametrize('val', TESTS)
     def test_from_py_valid(self, klass, val):
-        assert klass(none_ok=True).from_py(val) == val
+        cq = klass(none_ok=True)
+        assert cq.from_py(val) == val
+        assert cq.from_str(json.dumps(val)) == val
 
     @pytest.mark.parametrize('val', [
         None,  # with none_ok=False
