@@ -1273,7 +1273,7 @@ class TestDict:
     def test_from_str_int(self):
         typ = configtypes.Dict(keytype=configtypes.Int(),
                                valtype=configtypes.Int())
-        assert typ.from_str(json.dumps({0: 0})) == {0: 0}
+        assert typ.from_str('{0: 0}') == {0: 0}
 
     @pytest.mark.parametrize('val', [
         {"one": "1"},  # missing key
