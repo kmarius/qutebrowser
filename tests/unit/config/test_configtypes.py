@@ -21,7 +21,6 @@
 import re
 import os
 import sys
-import json
 import collections
 import itertools
 import warnings
@@ -467,7 +466,6 @@ class TestList:
 
     """Test List and FlagList."""
 
-    # FIXME:conf make sure from_str/from_py is called on valtype.
     # FIXME:conf how to handle []?
 
     @pytest.fixture(params=[ListSubclass, FlagListSubclass])
@@ -476,8 +474,12 @@ class TestList:
 
     @pytest.mark.parametrize('val', [['foo'], ['foo', 'bar']])
     def test_from_str(self, klass, val):
-        json_val = json.dumps(val)
-        assert klass().from_str(json_val) == val
+        yaml_val = utils.yaml_dump(val)
+        assert klass().from_str(yaml_val) == val
+
+    def test_from_str_int(self):
+        typ = configtypes.List(valtype=configtypes.Int())
+        assert typ.from_str(utils.yaml_dump([0])) == [0]
 
     @pytest.mark.parametrize('val', ['[[', 'true'])
     def test_from_str_invalid(self, klass, val):
@@ -1244,7 +1246,6 @@ class TestRegex:
 
 class TestDict:
 
-    # FIXME:conf make sure from_str/from_py is called on keytype/valtype.
     # FIXME:conf how to handle {}?
 
     @pytest.fixture
@@ -1259,20 +1260,25 @@ class TestDict:
     def test_from_str_valid(self, klass, val):
         expected = None if not val else val
         if isinstance(val, dict):
-            val = json.dumps(val)
+            val = utils.yaml_dump(val)
         d = klass(keytype=configtypes.String(), valtype=configtypes.String(),
                   none_ok=True)
         assert d.from_str(val) == expected
 
     @pytest.mark.parametrize('val', [
-        '["foo"]',  # valid json but not a dict
+        '["foo"]',  # valid yaml but not a dict
         '{"hello": 23}',  # non-string as value
-        '[invalid',  # invalid json
+        '[invalid',  # invalid yaml
     ])
     def test_from_str_invalid(self, klass, val):
         d = klass(keytype=configtypes.String(), valtype=configtypes.String())
         with pytest.raises(configexc.ValidationError):
             d.from_str(val)
+
+    def test_from_str_int(self):
+        typ = configtypes.Dict(keytype=configtypes.Int(),
+                               valtype=configtypes.Int())
+        assert typ.from_str(utils.yaml_dump({0: 0})) == {0: 0}
 
     @pytest.mark.parametrize('val', [
         {"one": "1"},  # missing key
@@ -1285,7 +1291,7 @@ class TestDict:
 
         with pytest.raises(configexc.ValidationError):
             if from_str:
-                d.from_str(json.dumps(val))
+                d.from_str(utils.yaml_dump(val))
             else:
                 d.from_py(val)
 
@@ -1662,7 +1668,7 @@ class TestConfirmQuit:
     def test_from_py_valid(self, klass, val):
         cq = klass(none_ok=True)
         assert cq.from_py(val) == val
-        assert cq.from_str(json.dumps(val)) == val
+        assert cq.from_str(utils.yaml_dump(val)) == val
 
     @pytest.mark.parametrize('val', [
         ['foo'],
