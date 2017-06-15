@@ -755,8 +755,9 @@ class Font(BaseType):
         if not value:
             return None
 
-        if not self.font_regex.match(value):
-            # FIXME:conf this used to have "pragma: no cover"
+        if not self.font_regex.match(value):  # pragma: no cover
+            # This should never happen, as the regex always matches everything
+            # as family.
             raise configexc.ValidationError(value, "must be a valid font")
 
         return value
