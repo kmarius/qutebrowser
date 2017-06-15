@@ -445,8 +445,8 @@ def qute_backend_warning(_url):
 def _qute_settings_set(url):
     """Handler for qute://settings/set."""
     query = QUrlQuery(url)
-    option = query.queryItemValue('option')
-    value = query.queryItemValue('value')
+    option = query.queryItemValue('option', QUrl.FullyDecoded)
+    value = query.queryItemValue('value', QUrl.FullyDecoded)
 
     # https://github.com/qutebrowser/qutebrowser/issues/727
     if option == 'content.javascript.enabled' and value == 'false':
@@ -466,6 +466,7 @@ def _qute_settings_set(url):
 @add_handler('settings')
 def qute_settings(url):
     """Handler for qute://settings. View/change qute configuration."""
+    # FIXME:conf add a test for this
     if url.path() == '/set':
         return _qute_settings_set(url)
 
