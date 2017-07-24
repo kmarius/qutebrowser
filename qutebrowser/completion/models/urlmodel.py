@@ -20,8 +20,10 @@
 """Function to return the url completion model for the `open` command."""
 
 from qutebrowser.completion.models import (completionmodel, listcategory,
-                                           histcategory)
+                                           histcategory, searchcategory)
 from qutebrowser.utils import log, objreg
+from qutebrowser.config import config
+from qutebrowser.utils import utils
 
 
 _URLCOL = 0
@@ -60,6 +62,7 @@ def url(*, info):
                   in objreg.get('quickmark-manager').marks.items())
     bookmarks = objreg.get('bookmark-manager').marks.items()
 
+    model.add_category(searchcategory.SearchCategory())
     model.add_category(listcategory.ListCategory(
         'Quickmarks', quickmarks, delete_func=_delete_quickmark, sort=False))
     model.add_category(listcategory.ListCategory(
