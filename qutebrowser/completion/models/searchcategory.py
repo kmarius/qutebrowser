@@ -44,14 +44,12 @@ class SearchCategory(QSortFilterProxyModel):
         Args:
             val: The value to set.
         """
+        self.srcmodel.clear()
+
         if not val:
             return
 
         engine, term = urlutils._parse_search_term(val)
-        assert term
-        if engine is None:
-            template = config.get('searchengines', 'DEFAULT')
-        else:
+        if engine is not None:
             template = config.get('searchengines', engine)
-        self.srcmodel.clear()
-        self.srcmodel.appendRow([QStandardItem(template.format(term))])
+            self.srcmodel.appendRow([QStandardItem(template.format(term))])
