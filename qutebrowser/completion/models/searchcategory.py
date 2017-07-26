@@ -19,7 +19,7 @@
 
 """Completion category that uses a list of tuples as a data source."""
 
-from PyQt5.QtCore import Qt, QSortFilterProxyModel
+from PyQt5.QtCore import Qt, QSortFilterProxyModel, QUrl
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
 
 from qutebrowser.utils import urlutils
@@ -52,4 +52,6 @@ class SearchCategory(QSortFilterProxyModel):
         engine, term = urlutils._parse_search_term(val)
         if engine is not None:
             template = config.get('searchengines', engine)
-            self.srcmodel.appendRow([QStandardItem(template.format(term))])
+            url = QUrl(template).host()
+            self.srcmodel.appendRow([QStandardItem(template.format(term)),
+                                     QStandardItem(url)])
