@@ -462,6 +462,12 @@ class TabBar(QTabBar):
         height = self.fontMetrics().height() + padding_v
         width = (self.fontMetrics().width('\u2026') + icon_size.width() +
                  padding_h + config.val.tabs.width.indicator)
+        max_width_conf = config.val.tabs.max_width
+        min_width_conf = config.val.tabs.min_width
+        # get actual min. never return anything that is larger than max_width
+        # since it is possible to set max_width higher than min_width
+        width = max(width, min(max_width_conf, min_width_conf))
+
         return QSize(width, height)
 
     def tabSizeHint(self, index):
@@ -477,6 +483,7 @@ class TabBar(QTabBar):
         """
         minimum_size = self.minimumTabSizeHint(index)
         height = minimum_size.height()
+        minimum_width = minimum_size.width()
         if self.vertical:
             confwidth = str(config.val.tabs.width.bar)
             if confwidth.endswith('%'):
@@ -513,23 +520,22 @@ class TabBar(QTabBar):
             # During shutdown the self.count goes down,
             # but the self.pinned_count not - this generates some odd behavior.
             # To avoid this we compare self.count against self.pinned_count.
-            if self.pinned_count > 0 and self.count() > self.pinned_count:
-                pinned_width = config.val.tabs.width.pinned * self.pinned_count
-                no_pinned_width = self.width() - pinned_width
-                width = no_pinned_width / (self.count() - self.pinned_count)
-            else:
+            if no_pinned_count * minimum_width > no_pinned_width:
+                size = QSize(minimum_width, height)
+                qtutils.ensure_valid(size)
+                return size
 
-                # Tabs should attempt to occupy the whole window width. If
-                # there are pinned tabs their size will be subtracted from the
-                # total window width.  During shutdown the self.count goes
-                # down, but the self.pinned_count not - this generates some odd
-                # behavior. To avoid this we compare self.count against
-                # self.pinned_count. If we end up having too little space, we
-                # set the minimum size below.
-                if self.pinned_count > 0 and no_pinned_count > 0:
-                    width = no_pinned_width / no_pinned_count
-                else:
-                    width = self.width() / self.count()
+            # Tabs should attempt to occupy the whole window width. If
+            # there are pinned tabs their size will be subtracted from the
+            # total window width.  During shutdown the self.count goes
+            # down, but the self.pinned_count not - this generates some odd
+            # behavior. To avoid this we compare self.count against
+            # self.pinned_count. If we end up having too little space, we
+            # set the minimum size below.
+            if self.pinned_count > 0 and no_pinned_count > 0:
+                width = no_pinned_width / no_pinned_count
+            else:
+                width = self.width() / self.count()
 
             # If no_pinned_width is not divisible by no_pinned_count, add a
             # pixel to some tabs so that there is no ugly leftover space.
@@ -537,9 +543,11 @@ class TabBar(QTabBar):
                     index < no_pinned_width % no_pinned_count):
                 width += 1
 
-            # If we don't have enough space, we return the minimum size so we
-            # get scroll buttons as soon as needed.
-            width = max(width, minimum_size.width())
+            tab_width_max_conf = config.val.tabs.max_width
+
+            # if tab_width_max_conf > 0 and tab_width_max_conf > minimum_width:
+            if tab_width_max_conf > 0:
+                width = max(min(width, tab_width_max_conf), minimum_width)
 
             size = QSize(width, height)
         qtutils.ensure_valid(size)
