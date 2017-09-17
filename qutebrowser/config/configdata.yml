@@ -1214,6 +1214,16 @@ tabs.background:
   type: Bool
   desc: Open new tabs (middleclick/ctrl+click) in the background.
 
+tabs.min_width:
+  default: -1
+  type: Int
+  desc: Minimum width of a horizontal tab.
+
+tabs.max_width:
+  default: -1
+  type: Int
+  desc: Maximum width of a horizontal tab.
+
 tabs.close_mouse_button:
   default: middle
   type:
