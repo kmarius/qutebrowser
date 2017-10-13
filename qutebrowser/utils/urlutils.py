@@ -123,7 +123,6 @@ def _get_search_engine(engine):
         name = tokens[0]
     else:
         name = engine
-    template = config.val.url.searchengines[engine]
     return (name, template)
 
 
