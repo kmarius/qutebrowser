@@ -24,7 +24,9 @@ import functools
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QUrl, PYQT_VERSION
 from PyQt5.QtGui import QPalette
 from PyQt5.QtWebEngineWidgets import (QWebEngineView, QWebEnginePage,
-                                      QWebEngineScript)
+                                      QWebEngineScript,
+                                      QWebEngineContextMenuData)
+from PyQt5.QtWidgets import QAction, QMenu
 
 from qutebrowser.browser import shared
 from qutebrowser.browser.webengine import certificateerror, webenginesettings
@@ -111,6 +113,13 @@ class WebEngineView(QWebEngineView):
         tab = shared.get_tab(self._win_id, target)
         return tab._widget  # pylint: disable=protected-access
 
+    def contextMenuEvent(self, event):
+        """We override this to get the (overridden) standard context menu from
+        the page.
+        """
+        menu = self.page().createStandardContextMenu()
+        menu.popup(event.globalPos())
+
 
 class WebEnginePage(QWebEnginePage):
 
@@ -139,6 +148,119 @@ class WebEnginePage(QWebEnginePage):
         self._set_bg_color()
         config.instance.changed.connect(self._set_bg_color)
         self.urlChanged.connect(self._inject_userjs)
+
+    def createStandardContextMenu(self):
+        data = self.contextMenuData()
+        if not data:
+            return None
+        menu = QMenu(self.parent())
+
+        # if data.isEditable() and !data.spellCheckerSuggestions().isEmpty()
+        #     QPointer<QWebEnginePage> thisRef(this);
+        #     for (int i=0; i < contextMenuData.spellCheckerSuggestions().count() && i < 4; i++) {
+        #         QAction *action = new QAction(menu);
+        #         QString replacement = contextMenuData.spellCheckerSuggestions().at(i);
+        #         QObject::connect(action, &QAction::triggered, [thisRef, replacement] { if (thisRef) thisRef->replaceMisspelledWord(replacement); });
+        #         action->setText(replacement);
+        #         menu->addAction(action);
+        #     }
+        #     menu->addSeparator();
+        # }
+
+        if data.linkText() and data.linkUrl().isValid():
+            action = self.action(QWebEnginePage.OpenLinkInThisWindow)
+            action.setText("Follow Link")
+            menu.addAction(action)
+            menu.addAction(self.action(QWebEnginePage.DownloadLinkToDisk))
+
+        if not data.selectedText():
+            action = QAction("Back", menu)
+            action.triggered.connect(self.parent().back)
+            # action->setEnabled(d->adapter->canGoBack());
+            menu.addAction(action)
+
+            action = QAction("Forward", menu)
+            action.triggered.connect(self.parent().forward)
+            # action->setEnabled(d->adapter->canGoForward());
+            menu.addAction(action)
+
+            action = QAction("Reload", menu);
+            action.triggered.connect(self.parent().reload)
+            menu.addAction(action)
+
+            menu.addAction(self.action(QWebEnginePage.ViewSource))
+        else:
+            menu.addAction(self.action(QWebEnginePage.Copy))
+            menu.addAction(self.action(QWebEnginePage.Unselect))
+
+        if data.linkText() and data.linkUrl().isValid():
+            menu.addAction(self.action(QWebEnginePage.CopyLinkToClipboard))
+
+        if data.mediaUrl().isValid():
+            media_type = data.mediaType()
+            if media_type == QWebEngineContextMenuData.MediaTypeImage:
+                menu.addAction(self.action(QWebEnginePage.DownloadImageToDisk))
+                menu.addAction(self.action(QWebEnginePage.CopyImageUrlToClipboard))
+                menu.addAction(self.action(QWebEnginePage.CopyImageToClipboard))
+            elif media_type == QWebEngineContextMenuData.MediaTypeCanvas:
+        #         Q_UNREACHABLE();    // mediaUrl is invalid for canvases
+                pass
+            elif media_type in [QWebEngineContextMenuData.MediaTypeCanvas,
+                                QWebEngineContextMenuData.MediaTypeVideo]:
+                menu.addAction(self.action(QWebEnginePage.DownloadMediaToDisk))
+                menu.addAction(self.action(QWebEnginePage.CopyMediaUrlToClipboard))
+                menu.addAction(self.action(QWebEnginePage.ToggleMediaPlayPause))
+                menu.addAction(self.action(QWebEnginePage.ToggleMediaLoop))
+                # if (data.mediaFlags() & WebEngineContextMenuData::MediaHasAudio)
+                #     menu->addAction(QWebEnginePage::action(ToggleMediaMute));
+                # if (data.mediaFlags() & WebEngineContextMenuData::MediaCanToggleControls)
+                #     menu->addAction(QWebEnginePage::action(ToggleMediaControls));
+
+        # wrong logic? indent this?
+        elif data.mediaType() == QWebEngineContextMenuData.MediaTypeCanvas:
+            menu.addAction(self.action(QWebEnginePage.CopyImageToClipboard))
+
+        # if (d->adapter->hasInspector())
+        #     menu->addAction(QWebEnginePage::action(InspectElement));
+
+        # if self.adapter.fullscreen:
+        #     menu.addAction(self.action(QWebEnginePage.ExitFullScreen))
+
+        text = data.selectedText()
+
+        if text:
+            # adv_engines = config.get('content', 'context-advanced-engines')
+            adv_engines = config.val.content.context_advanced_engines
+            # engines = config.get('content', 'context-engines')
+            engines = config.val.content.context_engines
+
+            if urlutils.is_url(text):
+                url = urlutils.qurl_from_user_input(text)
+                action = QAction('Open Link in New Tab', self,
+                                 triggered=functools.partial(self._open_in_tab,
+                                                             url))
+                menu.insertAction(menu.actions()[0], action)
+
+            item_text = text[:16] + "..." if len(text) > 18 else text
+
+            for engine in engines:
+                name, template = urlutils._get_search_engine(engine)
+                if name:
+                    item_name = '{} "{}"'.format(name, item_text)
+                    menu.addAction(item_name, functools.partial(self._search,
+                                                                text, engine))
+
+            if adv_engines:
+                search_menu = menu.addMenu("Advanced search")
+                for engine in adv_engines:
+                    name, template = urlutils._get_search_engine(engine)
+                    if name:
+                        search_menu.addAction(name,
+                                              functools.partial(self._search,
+                                                                text, engine))
+
+        menu.setAttribute(Qt.WA_DeleteOnClose, True)
+        return menu
 
     @config.change_filter('colors.webpage.bg')
     def _set_bg_color(self):
