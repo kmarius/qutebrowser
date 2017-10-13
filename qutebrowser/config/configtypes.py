@@ -1422,7 +1422,7 @@ class SearchEngineUrl(BaseType):
             raise configexc.ValidationError(
                 value, "invalid url, {}".format(url.errorString()))
 
-        return value
+        return tokens[0] + '|' + value
 
 
 class FuzzyUrl(BaseType):

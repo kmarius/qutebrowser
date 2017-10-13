@@ -52,6 +52,11 @@ class SearchCategory(QSortFilterProxyModel):
         engine, term = urlutils._parse_search_term(val)
         if engine is not None:
             template = config.val.url.searchengines[engine]
-            url = QUrl(template).host()
+            tokens = template.split('|')
+            if len(tokens) > 1:
+                template = tokens[1]
+                name = tokens[0]
+            else:
+                name = QUrl(template).host()
             self.srcmodel.appendRow([QStandardItem(template.format(term)),
-                                     QStandardItem(url)])
+                                     QStandardItem(name)])
