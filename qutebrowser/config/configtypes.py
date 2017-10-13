@@ -1404,6 +1404,10 @@ class SearchEngineUrl(BaseType):
         if not value:
             return None
 
+        tokens = value.split('|')
+        if len(tokens) == 2:
+            value = tokens[1]
+
         if not ('{}' in value or '{0}' in value):
             raise configexc.ValidationError(value, "must contain \"{}\"")
 
