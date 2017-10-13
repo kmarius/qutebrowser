@@ -117,6 +117,7 @@ def _get_search_url(txt):
 
 def _get_search_engine(engine):
     template = config.val.url.searchengines[engine]
+    print(template)
     tokens = template.split('|')
     if len(tokens) == 2:
         template = tokens[1]
