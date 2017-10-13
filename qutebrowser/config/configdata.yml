@@ -1527,7 +1527,7 @@ content.context_engines:
 content.context_advanced_engines:
   type:
     name: List
-    valtype: SearchEngineUrl
+    valtype: String
     none_ok: true
   default:
   desc: Advanced search.
