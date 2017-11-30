@@ -637,7 +637,7 @@ class TabBar(QTabBar):
             # behavior. To avoid this we compare self.count against
             # self.pinned_count. If we end up having too little space, we
             # set the minimum size below.
-            if self._pinnedCount() > 0 and no_pinned_count > 0:
+            if pinned_count > 0 and no_pinned_count > 0:
                 width = no_pinned_width / no_pinned_count
             else:
                 width = self.width() / self.count()
