@@ -31,7 +31,8 @@ from PyQt5.QtWidgets import QAction, QMenu
 from qutebrowser.browser import shared
 from qutebrowser.browser.webengine import certificateerror, webenginesettings
 from qutebrowser.config import config
-from qutebrowser.utils import log, debug, usertypes, jinja, objreg, qtutils
+from qutebrowser.utils import (log, debug, usertypes, jinja, objreg, qtutils,
+                               urlutils)
 
 
 class WebEngineView(QWebEngineView):
